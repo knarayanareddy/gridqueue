@@ -1,0 +1,7 @@
+[
+  {"id":"F1","claim":"A non-binding date is useful to SMEs.","test":"QACCEPT","expected":true,"if_false":"Reconsider the answer engine and test a document archive for advisers."},
+  {"id":"F2","claim":"The population prefers a refusal to a guess.","test":"QREFUSAL","expected":true,"if_false":"Investigate why refusal is not useful; do not substitute unsupported guesses."},
+  {"id":"F3","claim":"Potential buyers say they would pay.","test":"QPAYER","expected":true,"if_false":"The simulated payer assumption fails; interview potential buyers and reconsider the business model."},
+  {"id":"F4","claim":"The refusal majority survives the AI error story.","test":"QAI","expected":true,"if_false":"Investigate the model's dependence on this scenario; test real trust with people."},
+  {"id":"F5","claim":"Non-operators expect operators not to obstruct.","test":"QOPERATOR","expected":false,"if_false":"The simulated population expects obstruction; treat access as a go-to-market risk."}
+]

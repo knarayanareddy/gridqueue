@@ -1,0 +1,77 @@
+# Makefile for gridqueue-grid-connection
+# Requires uv (https://docs.astral.sh/uv/): curl -LsSf https://astral.sh/uv/install.sh | sh
+
+UV ?= uv
+BACKEND := backend
+
+.PHONY: build-pages pages-preview demo-video help sample check test lint format typecheck api ab sweep clean require-uv
+
+help:
+	@echo "Available commands:"
+	@echo "  make sample    - Offline, no API key: gate + contracts + /v1/answer on SYNTHETIC fixtures"
+	@echo "  make check     - Lint, typecheck and run the full test suite (what CI runs)"
+	@echo "  make ab        - Gate ON vs OFF over the synthetic adversarial set -> runs/ab_experiment_results.json"
+	@echo "  make sweep     - 50-area sweep through the gated pipeline -> runs/sweep_summary.json (SYNTHETIC offline)"
+	@echo "  make test      - Run the full pytest suite"
+	@echo "  make lint      - ruff lint + format check"
+	@echo "  make format    - Apply ruff formatting and safe fixes"
+	@echo "  make typecheck - mypy over backend/app"
+	@echo "  make api       - Start the FastAPI server on 0.0.0.0:8000"
+	@echo "  make build-pages - Static GitHub Pages demo (precomputed SYNTHETIC answers) -> frontend/dist/"
+	@echo "  make pages-preview - Serve frontend/dist/ at http://localhost:4173/gridqueue-grid-connection/"
+	@echo "  make demo-video - Record docs/media/gridqueue-demo.{mp4,webm} from the Pages build (needs scripts/ deps)"
+	@echo "  make clean     - Remove virtualenvs, caches and build artifacts"
+
+require-uv:
+	@command -v $(UV) >/dev/null 2>&1 || { echo "uv not found. Install: curl -LsSf https://astral.sh/uv/install.sh | sh"; exit 1; }
+
+# Offline, no key: the gate, the contracts, and POST /v1/answer replayed end to end on the SYNTHETIC fixtures
+# in data/fixtures/synthetic/ (live-path tests in that file use mocked Tavily/model clients, no network).
+sample: require-uv
+	cd $(BACKEND) && $(UV) run --extra dev pytest tests/test_gate.py tests/test_schemas.py tests/test_answer_api.py -v
+
+check: lint typecheck test
+
+test:
+	cd $(BACKEND) && .venv/bin/python -m pytest -q
+
+lint: require-uv
+	cd $(BACKEND) && $(UV) run --extra dev ruff check . && $(UV) run --extra dev ruff format --check .
+
+format: require-uv
+	cd $(BACKEND) && $(UV) run --extra dev ruff check --fix . && $(UV) run --extra dev ruff format .
+
+typecheck: require-uv
+	cd $(BACKEND) && $(UV) run --extra dev mypy
+
+api: require-uv
+	cd $(BACKEND) && $(UV) run gridqueue-api
+
+# C-T23: gate_on vs gate_off over the SYNTHETIC adversarial set -> runs/ab_experiment_results.json (local arms)
+ab:
+	cd $(BACKEND) && .venv/bin/python ../jobs/ab_branch_eval.py --check
+	$(BACKEND)/.venv/bin/python scripts/write_ab_report.py
+
+# C-T24: gated pipeline over 50 postcode areas -> runs/sweep_summary.json (fixture mode = SYNTHETIC, offline)
+sweep:
+	cd $(BACKEND) && .venv/bin/python ../jobs/sweep_50_postcodes.py
+	cp runs/sweep_summary.json docs/sweep-latest.json
+
+# Static GitHub Pages demo: answers precomputed by the pipeline in fixture mode (SYNTHETIC), then the Pages build.
+build-pages: require-uv
+	cd $(BACKEND) && $(UV) run python ../scripts/build_static_demo.py
+	cd frontend && (test -d node_modules || npm ci --no-audit --no-fund) && npm run build -- --mode pages
+
+pages-preview:
+	cd frontend && npx vite preview --mode pages --port 4173 --strictPort
+
+# Demo video (video/script.md, 12 shots, 170 s) recorded with Playwright from the Pages build. See scripts/README.md.
+demo-video: build-pages
+	cd scripts && (test -d node_modules || npm ci --no-audit --no-fund) && node --experimental-strip-types record-demo.ts
+
+clean:
+	find . -type d -name "__pycache__" -prune -exec rm -rf {} +
+	find . -type d -name ".pytest_cache" -prune -exec rm -rf {} +
+	find . -type d -name ".ruff_cache" -prune -exec rm -rf {} +
+	find . -type d -name ".mypy_cache" -prune -exec rm -rf {} +
+	rm -rf $(BACKEND)/.venv frontend/node_modules
