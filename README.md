@@ -15,6 +15,16 @@ make sweep      # synthetic postcode sweep, not coverage
 cd frontend && npm ci && npm run dev
 ```
 
+### Language and interface testing
+
+The interface defaults to English for the hackathon; the EN/NL switch is available on every screen and persists in the browser. Changing language does not reset form or simulation state. Source quotations must remain in their original language. The refusal provides a Dutch phone script and, in English mode, a clearly labelled English translation.
+
+For the browser language checks, start the dev server and run `cd frontend && CHROMIUM_PATH=/path/to/chromium npm run test:i18n`. This uses Playwright and requires a compatible locally installed Chromium; set `BASE_URL` if the server is not on port 5173.
+
+### Swarm lab
+
+Open `/swarm` (or choose **Swarm lab** in the menu). The local MiroFish-style experiment offers a force-directed network with peer-interaction pulses, an animated six-question synthetic survey replay, round playback, a synthetic adoption proxy, fictional profiles and a 200-seed baseline/scenario report. The adoption proxy is an assumed willingness rule, not observed behavior. The survey answers are generated from assumed priors, not collected from people; the opinion model does not use a language model or the MiroFish framework. A worker computes the report off the UI thread. See [the review](docs/REVIEW.md) for what remains unimplemented.
+
 The gate now conservatively downgrades binding claims containing planning markers. In the same synthetic A/B set, misattributions caught moved from 1/5 to 2/5; 3/5 still pass. The deterministic check does not establish semantic meaning. The swarm is an assumption-driven toy model, not interviews, a survey, or a forecast. The static interface can be built with `cd frontend && npm run build`; serving deep links needs an SPA fallback.
 
 ---
